@@ -1,0 +1,27 @@
+{
+  "name": "okx-market-guard",
+  "version": "0.1.0",
+  "description": "Read-only OKX public market data MCP server + CLI. No keys, no orders, no account access.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "bin": {
+    "okx-market-guard": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "node src/cli.ts serve",
+    "demo": "node demo/demo.ts",
+    "test": "node --test \"test/*.test.ts\"",
+    "test:live": "node --test test/live-api.test.ts",
+    "cli:help": "node src/cli.ts --help"
+  },
+  "keywords": [
+    "okx",
+    "mcp",
+    "market-data",
+    "read-only",
+    "cli"
+  ]
+}
