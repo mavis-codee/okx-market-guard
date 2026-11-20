@@ -163,3 +163,170 @@ rejected: path "/api/v5/account/balance" is not an allowlisted public read-only 
 --- done ---
 All calls above were public read-only GETs to https://www.okx.com/api/v5/*
 
+
+===== OFFICIAL CLI HELP EVIDENCE (appended) =====
+date: 2026-11-20T20:03:42.4441462+08:00
+package: @okx_ai/okx-trade-cli@1.5.1
+entry: node_modules/@okx_ai/okx-trade-cli/dist/index.js
+rule: --aiBuilderCode only on commands whose official --help exposes it; raw tag forbidden
+
+--- okx spot place --help : aiBuilderCode=True ---
+  Usage: okx spot place --instId <id> --side <buy|sell> --ordType <type> --sz <n> [--px <price>] [--tdMode <cash|cross|isolated>]
+                [--stpMode <cancel_maker|cancel_taker|cancel_both>] [--aiBuilderCode <code>]
+
+--- okx spot batch --help : aiBuilderCode=True ---
+  Usage: okx spot batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)
+
+--- okx swap place --help : aiBuilderCode=True ---
+  Usage: okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> [--posSide <side>] [--px <price>]
+               [--stpMode <cancel_maker|cancel_taker|cancel_both>] [--aiBuilderCode <code>]
+
+--- okx swap close --help : aiBuilderCode=True ---
+  Usage: okx swap close --instId <id> --mgnMode <cross|isolated> [--posSide <net|long|short>] [--autoCxl] [--aiBuilderCode <code>]
+
+--- okx swap batch --help : aiBuilderCode=True ---
+  Usage: okx swap batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)
+
+--- okx futures place --help : aiBuilderCode=True ---
+  Usage: okx futures place --instId <id> --side <buy|sell> --ordType <type> --sz <n>
+                 [--stpMode <cancel_maker|cancel_taker|cancel_both>] [--aiBuilderCode <code>]
+
+--- okx futures close --help : aiBuilderCode=True ---
+  Usage: okx futures close --instId <id> --mgnMode <cross|isolated> [--posSide <net|long|short>] [--autoCxl] [--aiBuilderCode <code>]
+
+--- okx futures batch --help : aiBuilderCode=True ---
+  Usage: okx futures batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)
+
+--- okx option place --help : aiBuilderCode=True ---
+  Usage: okx option place --instId <id> --tdMode <cash|cross|isolated> --side <buy|sell> --ordType <type> --sz <n>
+               [--stpMode <cancel_maker|cancel_taker|cancel_both>] [--aiBuilderCode <code>]
+
+--- okx spot cancel --help : aiBuilderCode=False (expect false) ---
+
+--- okx spot amend --help : aiBuilderCode=False (expect false) ---
+
+--- okx swap cancel --help : aiBuilderCode=False (expect false) ---
+
+--- okx swap amend --help : aiBuilderCode=False (expect false) ---
+
+--- okx futures cancel --help : aiBuilderCode=False (expect false) ---
+
+===== list-tools / trade-tools (this repo) =====
+{"officialPackage":"@okx_ai/okx-trade-cli","officialVersion":"1.5.1","defaultMode":"demo","liveDefault":false,"userConfigExists":true,"aiBuilderHelpEvidence":["okx spot place ... [--aiBuilderCode <code>]","okx spot batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)","okx swap place ... [--aiBuilderCode <code>]","okx swap close --instId <id> --mgnMode <cross|isolated> [--posSide <net|long|short>] [--autoCxl] [--aiBuilderCode <code>]","okx swap batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)","okx futures place ... [--aiBuilderCode <code>]","okx futures close --instId <id> --mgnMode <cross|isolated> [--posSide <net|long|short>] [--autoCxl] [--aiBuilderCode <code>]","okx futures batch --action <place|amend|cancel> --orders '<json>' [--aiBuilderCode <code>] (for --action place)","okx option place ... [--aiBuilderCode <code>]"],"tools":["trade_spot_place","trade_spot_batch_place","trade_swap_place","trade_swap_close","trade_swap_batch_place","trade_futures_place","trade_futures_close","trade_futures_batch_place","trade_option_place"]}
+
+===== trade-plan demo (no spawn of orders) =====
+{"file":"E:\\轻量大模型\\AutoClaw2\\resources\\vendor\\node\\node.exe","args":["E:\\okx-builder-mvp\\node_modules\\@okx_ai\\okx-trade-cli\\dist\\index.js","--json","--demo","--profile","demo","spot","place","--instId","BTC-USDT","--side","buy","--ordType","limit","--sz","0.001","--px","50000"],"attributed":false,"mode":"demo","note":"plan only; nothing was spawned; credentials never printed"}
+
+{"file":"E:\\轻量大模型\\AutoClaw2\\resources\\vendor\\node\\node.exe","args":["E:\\okx-builder-mvp\\node_modules\\@okx_ai\\okx-trade-cli\\dist\\index.js","--json","--demo","--profile","demo","swap","close","--instId","BTC-USDT-SWAP","--mgnMode","cross"],"attributed":false,"mode":"demo","note":"plan only; nothing was spawned; credentials never printed"}
+
+node.exe : validation: orders must be a non-empty array
+所在位置 行:37 字符: 8
++ $tp3 = & node src/cli.ts trade-plan trade_futures_batch_place --order ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (validation: ord...non-empty array:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+===== live plan without code (expect reject) =====
+node.exe : validation: live trading is rejected: OKX_AI_BUILDER_CODE is empty. Use demo (default) or provide a 1-16 alp
+hanumeric code.
+所在位置 行:41 字符: 8
++ $tp4 = & node src/cli.ts trade-plan trade_swap_place --instId BTC-USD ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (validation: liv...hanumeric code.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+===== live plan with code (plan only) =====
+{"file":"E:\\轻量大模型\\AutoClaw2\\resources\\vendor\\node\\node.exe","args":["E:\\okx-builder-mvp\\node_modules\\@okx_ai\\okx-trade-cli\\dist\\index.js","--json","--live","--profile","demo","swap","place","--instId","BTC-USDT-SWAP","--side","buy","--ordType","market","--sz","1","--aiBuilderCode","[CODE]"],"attributed":true,"mode":"live","note":"plan only; nothing was spawned; credentials never printed"}
+
+===== no real order was placed; no key/secret/passphrase printed =====
+
+===== OFFICIAL list-tools 1.5.1: all commands whose schema has aiBuilderCode =====
+wrapped in this repo (place/close/batch mapping): 9
+unwrapped (help also exposes the flag; not in this iteration): algo/bot/event
+okx spot place
+okx spot batch
+okx spot algo place
+okx spot algo trail
+okx swap place
+okx swap close
+okx swap batch
+okx swap algo trail
+okx swap algo place
+okx futures place
+okx futures close
+okx futures batch
+okx futures algo trail
+okx futures algo place
+okx option place
+okx option algo place
+okx bot grid create
+okx bot recurring create
+okx bot smart-portfolio create
+okx bot dca create
+okx event place
+
+===== command-level --help for unwrapped commands (aiBuilderCode present) =====
+okx spot algo place --help aiBuilderCode=True
+okx swap algo place --help aiBuilderCode=True
+okx futures algo place --help aiBuilderCode=True
+okx option algo place --help aiBuilderCode=True
+okx bot grid create --help aiBuilderCode=True
+okx event place --help aiBuilderCode=True
+
+===== this-repo trade-plan: batch (node argv, not PS quoting) =====
+{"file":"E:\\轻量大模型\\AutoClaw2\\resources\\vendor\\node\\node.exe","args":["E:\\okx-builder-mvp\\node_modules\\@okx_ai\\okx-trade-cli\\dist\\index.js","--json","--demo","--profile","demo","futures","batch","--action","place","--orders","[{\"instId\":\"BTC-USD-240628\",\"side\":\"sell\",\"ordType\":\"market\",\"sz\":\"1\"}]"],"attributed":false,"mode":"demo","note":"plan only; nothing was spawned; credentials never printed"}
+
+===== official CLI read-only handshake: market ticker with user demo profile (no order) =====
+node.exe : Error: Missing required parameter "instId".
+所在位置 行:26 字符: 9
++ $tick = & node $cli --profile demo --demo --json market ticker --inst ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error: Missing ...meter "instId".:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Version: @okx_ai/okx-trade-cli@1.5.1
+
+===== no real order was placed =====
+
+===== official CLI read-only handshake retry: market ticker (positional instId), user demo profile =====
+[
+  {
+    "instType": "SPOT",
+    "instId": "BTC-USDT",
+    "last": "61604.5",
+    "lastSz": "0.00002",
+    "askPx": "61604.1",
+    "askSz": "2.35206816",
+    "bidPx": "61603.8",
+    "bidSz": "0.00002",
+    "open24h": "63823.1",
+    "high24h": "64199",
+    "low24h": "61000",
+    "volCcy24h": "72600017448.770546218",
+    "vol24h": "1167634.66514319",
+    "ts": "1795176322972",
+    "sodUtc0": "61984.8",
+    "sodUtc8": "63110.4"
+  }
+]
+
+tick_ok=True
+
+===== this-repo market_ticker (public REST, no profile) =====
+{"source":"okx-public-rest","readOnly":true,"ticker":{"instId":"BTC-USDT","instType":"SPOT","last":"61604.4","bid":"61607.3","ask":"61607.4","open24h":"63823","high24h":"64079.3","low24h":"61293.8","vol24h":"10825.70945215","volCcy24h":"673787997.344442084","changePercent24h":-3.476176,"bidAskSpreadPct":0.000162,"ts":"1795176324069"}}
+
+market_guard_ok=True
+
+===== MCP handshake with trade tools (initialize + tools/list), no tools/call on trade_* =====
+initialize: ok, serverInfo matched
+no tools/call was sent for trade_* (safety)
+===== end appendix =====
+
+===== MCP tools/list summary (14 = 5 market + 9 trade) =====
+tool_count: 14
+tools: market_ticker,market_candles,funding_rate,oi_summary,alert_check,trade_spot_place,trade_spot_batch_place,trade_swap_place,trade_swap_close,trade_swap_batch_place,trade_futures_place,trade_futures_close,trade_futures_batch_place,trade_option_place
+trade_destructive: true
+market_readonly: true
+no tools/call was sent for any trade_* tool; no order placed
