@@ -330,3 +330,31 @@ tools: market_ticker,market_candles,funding_rate,oi_summary,alert_check,trade_sp
 trade_destructive: true
 market_readonly: true
 no tools/call was sent for any trade_* tool; no order placed
+
+===== DEMO E2E (2026-11-20 22:08:13 +08:00, user-approved) =====
+profile: demo (demo=true); CLI env: demo (simulated trading)
+balance after reset: BTC 1 / OKB 100 / USDT 5000 / ETH 1 (virtual)
+command: node src/cli.ts trade trade_spot_place --instId BTC-USDT --side buy --ordType market --sz 100
+bridge: mode=demo attributed=false (Builder Code not yet issued) exitCode=0
+place resp: ordId=4116499084361170944 sCode=0 sMsg=Order placed tag=CLI(official default) ts=1795183632820
+--- spot get ---
+ordId                 4116499084361170944
+instId                BTC-USDT
+side                  buy
+ordType               market
+px                    
+sz                    100
+fillSz                0.00161535
+avgPx                 61905.8
+state                 filled
+cTime                 2026/11/20 22:07:12
+
+--- spot fills ---
+Environment: demo (simulated trading)
+
+instId    side  fillPx   fillSz      fee             ts                 
+--------  ----  -------  ----------  --------------  -------------------
+BTC-USDT  buy   61905.8  0.00161535  -0.00000161535  2026/11/20 22:07:12
+
+note: demo only, no live order; credentials never printed; attribution order pending Builder Code.
+
