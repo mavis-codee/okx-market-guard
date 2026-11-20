@@ -39,10 +39,10 @@ export interface ToolDef {
     additionalProperties: false;
   };
   annotations: {
-    readOnlyHint: true;
+    readOnlyHint: boolean;
     openWorldHint: true;
-    destructiveHint: false;
-    idempotentHint: true;
+    destructiveHint: boolean;
+    idempotentHint: boolean;
   };
   run(args: unknown, client: OkxClient): Promise<unknown>;
 }

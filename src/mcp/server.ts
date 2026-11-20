@@ -1,5 +1,6 @@
 import { VERSION, SERVER_NAME } from '../version.ts';
-import { TOOLS, findTool } from '../tools/index.ts';
+import { TOOLS } from '../tools/index.ts';
+import type { ToolDef } from '../tools/index.ts';
 import type { OkxClient } from '../okx-client.ts';
 
 export const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'] as const;
@@ -26,16 +27,29 @@ export interface JsonRpcResponse {
 
 const SERVER_INSTRUCTIONS =
   'okx-market-guard exposes OKX PUBLIC market data only (ticker, candles, funding rate, ' +
-  'open interest, and stateless threshold checks). Every tool is read-only. ' +
+  'open interest, and stateless threshold checks). Every market tool is read-only. ' +
   'This server has no API key, cannot place or cancel orders, and cannot access account or wallet data. ' +
   'Spot instrument IDs look like BTC-USDT; perpetuals look like BTC-USDT-SWAP.';
+
+const SERVER_INSTRUCTIONS_WITH_TRADE =
+  'okx-market-guard: READ-ONLY OKX public market tools plus DEMO-FIRST trading composed from the ' +
+  'official @okx_ai/okx-trade-cli (spawned as a child process). Market tools are public read-only REST. ' +
+  'Trade tools (trade_*) are destructive and default to --demo. This server never holds API keys; ' +
+  'the user configures ~/.okx/config.toml and the official CLI reads it. ' +
+  'Live mode is off unless explicitly enabled and OKX_AI_BUILDER_CODE is set. ' +
+  'aiBuilderCode is only attached to commands whose official --help exposes the flag. ' +
+  'Spot IDs: BTC-USDT. Perps: BTC-USDT-SWAP.';
 
 export class McpServer {
   private negotiatedVersion: string = LATEST_PROTOCOL_VERSION;
   private readonly client: OkxClient;
+  private readonly extraTools: readonly ToolDef[];
+  private readonly allTools: readonly ToolDef[];
 
-  constructor(client: OkxClient) {
+  constructor(client: OkxClient, extraTools: readonly ToolDef[] = []) {
     this.client = client;
+    this.extraTools = extraTools;
+    this.allTools = [...TOOLS, ...extraTools];
   }
 
   /**
@@ -127,13 +141,13 @@ export class McpServer {
         name: SERVER_NAME,
         version: VERSION,
       },
-      instructions: SERVER_INSTRUCTIONS,
+      instructions: this.extraTools.length > 0 ? SERVER_INSTRUCTIONS_WITH_TRADE : SERVER_INSTRUCTIONS,
     };
   }
 
   private onToolsList(): Record<string, unknown> {
     return {
-      tools: TOOLS.map((t) => ({
+      tools: this.allTools.map((t) => ({
         name: t.name,
         title: t.title,
         description: t.description,
@@ -148,10 +162,10 @@ export class McpServer {
     if (typeof p.name !== 'string') {
       throw invalidParams('tools/call requires a tool name');
     }
-    const tool = findTool(p.name);
+    const tool = this.allTools.find((t) => t.name === p.name);
     if (!tool) {
       throw invalidParams(
-        `Unknown tool "${p.name}". Available: ${TOOLS.map((t) => t.name).join(', ')}`,
+        `Unknown tool "${p.name}". Available: ${this.allTools.map((t) => t.name).join(', ')}`,
       );
     }
     try {
@@ -215,6 +229,8 @@ export interface ServeStdioOptions {
   stdin?: NodeJS.ReadableStream;
   stdout?: NodeJS.WritableStream;
   stderr?: NodeJS.WritableStream;
+  extraTools?: readonly ToolDef[];
+  tradeMode?: 'demo' | 'live' | undefined;
 }
 
 /** Run the MCP server on stdio (newline-delimited JSON-RPC 2.0). */
@@ -222,7 +238,24 @@ export async function serveStdio(client: OkxClient, opts: ServeStdioOptions = {}
   const stdin = opts.stdin ?? process.stdin;
   const stdout = opts.stdout ?? process.stdout;
   const stderr = opts.stderr ?? process.stderr;
-  const server = new McpServer(client);
+  const server = new McpServer(client, opts.extraTools ?? []);
+
+  const hasTrade = (opts.extraTools?.length ?? 0) > 0;
+  const banner = hasTrade
+    ? [
+        `[okx-market-guard] MCP stdio server ready (protocol ${LATEST_PROTOCOL_VERSION})`,
+        '[okx-market-guard] Market: READ-ONLY OKX public REST',
+        `[okx-market-guard] Trade: official @okx_ai/okx-trade-cli composition, mode=${opts.tradeMode ?? 'demo'}`,
+        '[okx-market-guard] No API keys in this process. User config in ~/.okx/config.toml.',
+        '[okx-market-guard] Waiting for JSON-RPC lines on stdin...',
+      ]
+    : [
+        `[okx-market-guard] MCP stdio server ready (protocol ${LATEST_PROTOCOL_VERSION})`,
+        '[okx-market-guard] READ-ONLY: OKX public market REST only',
+        '[okx-market-guard] No API keys, no orders, no account access',
+        '[okx-market-guard] Waiting for JSON-RPC lines on stdin...',
+      ];
+  stderr.write(banner.join('\n') + '\n');
 
   stderr.write(
     [

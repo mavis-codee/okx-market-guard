@@ -2,6 +2,18 @@
 import { OkxClient, fetchServerTime } from './okx-client.ts';
 import { TOOLS, findTool } from './tools/index.ts';
 import { serveStdio } from './mcp/server.ts';
+import {
+  TradeCliBridge,
+  createTradeTools,
+  tradeToolNames,
+  AI_BUILDER_HELP_EVIDENCE,
+  AI_BUILDER_UNWRAPPED,
+  OFFICIAL_CLI_PACKAGE,
+  OFFICIAL_CLI_VERSION,
+  userOkxConfigExists,
+  findTradeSpec,
+  type TradeMode,
+} from './trade-cli-bridge.ts';
 import { VERSION, SERVER_NAME } from './version.ts';
 import { ValidationError } from './errors.ts';
 
@@ -88,6 +100,10 @@ function usage(): string {
     '                                           op: gt|gte|lt|lte',
     '  version                                  Print version',
     '  serve                                    Start MCP stdio server (JSON-RPC 2.0)',
+    '                                           Flags: --no-trade, --trade-live (opt-in)',
+    '  trade-tools                              List trade tools (official CLI composition)',
+    '  trade <toolName> [flags]                 Call a trade_* tool (demo unless --trade-live)',
+    '  trade-plan <toolName> [flags]            Print the CLI argv without spawning',
     '  tools                                    List available tools as JSON',
     '  time                                     OKX public server time (connectivity check)',
     '',
@@ -97,8 +113,11 @@ function usage(): string {
     '  --version   Print version',
     '',
     'Safety:',
-    '  Public read-only REST only (www.okx.com /api/v5). No API key, no orders,',
-    '  no withdrawals, no account endpoints. Alerts are stateless; nothing is stored.',
+    '  Market tools: public read-only REST only (www.okx.com /api/v5). No API key.',
+    '  Trade tools: official @okx_ai/okx-trade-cli child process, --demo DEFAULT.',
+    '  Live is opt-in (--trade-live) and requires OKX_AI_BUILDER_CODE (1-16 alnum).',
+    '  Credentials stay in the user ~/.okx/config.toml. This process never reads them.',
+    '  Alerts are stateless. No real-funds testing is performed by this repo.',
     '',
     'Exit codes: 0 ok, 1 tool/validation/API error, 2 usage error.',
   ].join('\n');
@@ -219,7 +238,82 @@ async function runCommand(args: ParsedArgs): Promise<number> {
       return 0;
     }
     case 'serve': {
-      await serveStdio(client);
+      const includeTrade = args.flags['no-trade'] !== true;
+      const live = args.flags['trade-live'] === true;
+      const mode: TradeMode = live ? 'live' : 'demo';
+      let extraTools: ReturnType<typeof createTradeTools> = [];
+      if (includeTrade) {
+        const bridge = new TradeCliBridge({ mode });
+        extraTools = createTradeTools(bridge);
+      }
+      await serveStdio(client, { extraTools, tradeMode: includeTrade ? mode : undefined });
+      return 0;
+    }
+    case 'trade-tools': {
+      printJson(
+        {
+          officialPackage: OFFICIAL_CLI_PACKAGE,
+          officialVersion: OFFICIAL_CLI_VERSION,
+          defaultMode: 'demo',
+          liveDefault: false,
+          userConfigExists: userOkxConfigExists(),
+          aiBuilderHelpEvidence: AI_BUILDER_HELP_EVIDENCE,
+          aiBuilderUnwrapped: AI_BUILDER_UNWRAPPED,
+          tools: tradeToolNames(),
+        },
+        args.pretty,
+      );
+      return 0;
+    }
+    case 'trade-plan':
+    case 'trade': {
+      const toolName = args.positional[0];
+      if (toolName === undefined) {
+        failUsage('missing trade tool name. Try: trade-tools');
+      }
+      if (!findTradeSpec(toolName)) {
+        failUsage(`unknown trade tool "${toolName}". Try: trade-tools`);
+      }
+      const live = args.flags['trade-live'] === true;
+      const mode: TradeMode = live ? 'live' : 'demo';
+      // Remaining flags (after the tool name) are tool arguments.
+      const body: Record<string, unknown> = {};
+      const spec = findTradeSpec(toolName);
+      if (!spec) failUsage('unknown tool');
+      for (const key of spec.allowed) {
+        const f = args.flags[key];
+        if (f === undefined) continue;
+        if (key === 'orders' && typeof f === 'string') {
+          try {
+            body[key] = JSON.parse(f) as unknown;
+          } catch {
+            body[key] = f;
+          }
+        } else if (f === 'true' || f === 'false') {
+          body[key] = f === 'true';
+        } else {
+          body[key] = f;
+        }
+      }
+      if (args.command === 'trade-plan') {
+        const bridge = new TradeCliBridge({ mode });
+        const invocation = bridge.plan(toolName, body);
+        const codeEnv = process.env['OKX_AI_BUILDER_CODE'] ?? '';
+        printJson(
+          {
+            file: invocation.file,
+            args: invocation.args.map((a) => (codeEnv !== '' && a === codeEnv ? '[CODE]' : a)),
+            attributed: invocation.attributed,
+            mode: invocation.mode,
+            note: 'plan only; nothing was spawned; credentials never printed',
+          },
+          args.pretty,
+        );
+        return 0;
+      }
+      const bridge = new TradeCliBridge({ mode });
+      const out = await bridge.call(toolName, body);
+      printJson(out, args.pretty);
       return 0;
     }
     default:
