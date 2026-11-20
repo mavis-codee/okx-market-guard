@@ -1,0 +1,165 @@
+﻿Captured: 2026-11-20 18:18:49 +08:00
+Command: node demo/demo.ts
+All HTTP calls: public GET https://www.okx.com/api/v5/*
+========================================================================
+okx-market-guard v0.1.0 — demo
+READ-ONLY OKX public market REST (www.okx.com /api/v5)
+No API key. No orders. No withdrawals. No account access.
+========================================================================
+
+--- MCP initialize ---
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"okx-market-guard","version":"0.1.0"},"instructions":"okx-market-guard exposes OKX PUBLIC market data only (ticker, candles, funding rate, open interest, and stateless threshold checks). Every tool is read-only. This server has no API key, cannot place or cancel orders, and cannot access account or wallet data. Spot instrument IDs look like BTC-USDT; perpetuals look like BTC-USDT-SWAP."}}
+
+--- MCP tools/list (names only) ---
+  market_ticker    Market ticker
+  market_candles   Market candles
+  funding_rate     Funding rate
+  oi_summary       Open interest summary
+  alert_check      Alert check (stateless, read-only)
+
+--- market_ticker BTC-USDT ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "ticker": {
+    "instId": "BTC-USDT",
+    "instType": "SPOT",
+    "last": "61733.2",
+    "bid": "61733.2",
+    "ask": "61733.3",
+    "open24h": "63861",
+    "high24h": "64084.9",
+    "low24h": "61293.8",
+    "vol24h": "10767.3798786",
+    "volCcy24h": "670760337.094452568",
+    "changePercent24h": -3.331924,
+    "bidAskSpreadPct": 0.000162,
+    "ts": "1795169840570"
+  }
+}
+
+--- market_candles BTC-USDT 1H x3 (newest first) ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "instId": "BTC-USDT",
+  "bar": "1H",
+  "count": 3,
+  "candles": [
+    {
+      "ts": "1795168800000",
+      "open": "61637.2",
+      "high": "61861.3",
+      "low": "61621.9",
+      "close": "61739.1",
+      "vol": "288.81372378",
+      "volCcy": "17831852.758340962",
+      "volCcyQuote": "17831852.758340962",
+      "confirmed": false
+    },
+    {
+      "ts": "1795165200000",
+      "open": "61830.6",
+      "high": "61874.9",
+      "low": "61555.5",
+      "close": "61638.4",
+      "vol": "269.1462098",
+      "volCcy": "16605059.58407231",
+      "volCcyQuote": "16605059.58407231",
+      "confirmed": true
+    },
+    {
+      "ts": "1795161600000",
+      "open": "61852.1",
+      "high": "62060",
+      "low": "61728.1",
+      "close": "61830.6",
+      "vol": "412.86079386",
+      "volCcy": "25568193.163849948",
+      "volCcyQuote": "25568193.163849948",
+      "confirmed": true
+    }
+  ]
+}
+
+--- funding_rate BTC-USDT-SWAP ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "funding": {
+    "instType": "SWAP",
+    "instId": "BTC-USDT-SWAP",
+    "fundingRate": "-0.0000402666368318",
+    "nextFundingRate": "",
+    "fundingTime": "1795190400000",
+    "nextFundingTime": "1795219200000",
+    "method": "current_period",
+    "maxFundingRate": "0.00375",
+    "minFundingRate": "-0.00375",
+    "interestRate": "0.0001000000000000",
+    "premium": "-0.0004015791127046",
+    "settState": "settled",
+    "ts": "1795169828735"
+  }
+}
+
+--- oi_summary BTC-USDT-SWAP ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "count": 1,
+  "items": [
+    {
+      "instId": "BTC-USDT-SWAP",
+      "instType": "SWAP",
+      "oi": "3430521.2600000148",
+      "oiCcy": "34305.212600000148",
+      "oiUsd": "2117708801.0956491362472",
+      "ts": "1795169841372"
+    }
+  ]
+}
+
+--- alert_check BTC-USDT last > 0 (should trigger) ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "instId": "BTC-USDT",
+  "metric": "last",
+  "op": "gt",
+  "threshold": 0,
+  "current": 61733.3,
+  "triggered": true,
+  "describe": "triggered=true because last 61733.3 > 0 is true",
+  "ts": "1795169840867"
+}
+
+--- alert_check BTC-USDT last > 1e9 (should not trigger) ---
+result:
+{
+  "source": "okx-public-rest",
+  "readOnly": true,
+  "instId": "BTC-USDT",
+  "metric": "last",
+  "op": "gt",
+  "threshold": 1000000000,
+  "current": 61733,
+  "triggered": false,
+  "describe": "triggered=false because last 61733 > 1000000000 is false",
+  "ts": "1795169841572"
+}
+
+--- safety: funding on a spot instId is rejected before any HTTP call ---
+rejected: funding_rate needs a perpetual swap instId (ends with -SWAP), got "BTC-USDT". Example: BTC-USDT-SWAP.
+
+--- safety: private path is rejected by allowlist ---
+rejected: path "/api/v5/account/balance" is not an allowlisted public read-only endpoint. Allowed: /api/v5/market/ticker, /api/v5/market/candles, /api/v5/public/funding-rate, /api/v5/public/open-interest, /api/v5/public/time
+
+--- done ---
+All calls above were public read-only GETs to https://www.okx.com/api/v5/*
+
